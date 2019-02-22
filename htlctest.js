@@ -39,7 +39,7 @@ async function test() {
         network: network
     }).address
 
-    console.log(wallet1, wallet2.address, wallet1)
+    console.log(wallet1.address, wallet2.address)
 
 
     //witness secret
@@ -57,7 +57,7 @@ async function test() {
 
     const htlc = await createScriptForLender(lt, lsh, wsh, wallet1.publicKey, wallet2.publicKey)
 
-    console.log(htlc)
+    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')}`, htlc)
 
     const txId = await sendBTCTransaction(wallet1, htlc.htlcAddress, 1500000)
 }
@@ -72,8 +72,6 @@ function sendBTCTransaction(from, to, satoshis) {
     return new Promise(async (resolve, reject) => {
 
         const utxoGroup = await getUTXO(from.address)
-
-        console.log(network)
 
         const txb = new bitcoin.TransactionBuilder(network)
         // txb.setVersion(1)
@@ -106,7 +104,7 @@ function sendBTCTransaction(from, to, satoshis) {
         const data = {
             'tx': txb.build().toHex()
         }
-        console.log(data, txb.build())
+        console.log(data)
     })
 }
 
