@@ -60,26 +60,38 @@ function createScriptForLender(locktime, lsh, wsh, treasury, lender) {
 
         var redeemScript = bitcoin.script.compile([
             bitcoin.opcodes.OP_IF,
-                //Stack: <treasury Sig> <0> <witness secret> <lender secret>
+                // Stack: <treasury Sig> <pubkey> <witness secret> <lender secret>
                 bitcoin.opcodes.OP_SHA256,
+                // witness secret hash
                 wsh,
                 bitcoin.opcodes.OP_EQUALVERIFY,
+                // Stack: <treasury Sig> <pubkey> <witness secret> 
                 bitcoin.opcodes.OP_SHA256,
+                // lender secret hash
                 lsh,
                 bitcoin.opcodes.OP_EQUALVERIFY,
+                // Stack: <treasury Sig> <pubkey> 
                 bitcoin.opcodes.OP_DUP,
+                // Stack: <treasury Sig> <pubkey> <pubkey>
                 bitcoin.opcodes.OP_HASH160,
+                // Stack: <treasury Sig> <pubkey> <treasuryHash>
                 treasuryHash,
 
             bitcoin.opcodes.OP_ELSE,
                 bitcoin.script.number.encode(locktime),
+                // Stack: <lender Sig> <pubkey> <lender secret> <locktime>
                 bitcoin.opcodes.OP_CHECKLOCKTIMEVERIFY,
                 bitcoin.opcodes.OP_DROP,
+                // Stack: <lender Sig> <pubkey> <lender secret>
                 bitcoin.opcodes.OP_SHA256,
+                // lender seccret hash
                 lsh,
                 bitcoin.opcodes.OP_EQUALVERIFY,
+                // Stack: <lender Sig> <pubkey>
                 bitcoin.opcodes.OP_DUP,
+                // Stack: <lender Sig> <pubkey> <pubkey>
                 bitcoin.opcodes.OP_HASH160,
+                // Stack: <lender Sig> <pubkey> <lenderhash>
                 lenderHash,
             bitcoin.opcodes.OP_ENDIF,
 
