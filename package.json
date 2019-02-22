@@ -1,0 +1,22 @@
+{
+  "name": "mhtlcs",
+  "version": "1.0.0",
+  "description": "implementation of multi-hash timed lock contract for locking btc.",
+  "main": "htlctest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SwingbyProtocol/mHTLCs.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SwingbyProtocol/mHTLCs/issues"
+  },
+  "homepage": "https://github.com/SwingbyProtocol/mHTLCs#readme",
+  "dependencies": {
+    "got": "^9.6.0"
+  }
+}
