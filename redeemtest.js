@@ -31,9 +31,9 @@ async function test() {
     const ws = new Buffer(process.env.WS, 'hex')
     const ls = new Buffer(process.env.LS, 'hex')
     const rs = new Buffer(process.env.RS, 'hex')
+    const lt = Number(process.env.LT)
     const txId = process.env.TX
     const vout = Number(process.env.VOUT)
-    const lt = Number(process.env.LT)
 
     const txb = new bitcoin.TransactionBuilder(network)
 
