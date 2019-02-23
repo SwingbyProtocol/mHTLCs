@@ -56,9 +56,11 @@ async function test() {
 
     const htlc = await createScriptForLender(lt, lsh, wsh, treasury.publicKey, lender.publicKey)
 
-    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')}`, htlc)
+    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')} lt = ${lt}`)
+    console.log(`htlc = ${htlc.address}`)
+    console.log(`rs = ${htlc.rs}`)
 
-    const tx = await sendBTCTransaction(lender, htlc.htlcAddress, 1500000)
+    const tx = await sendBTCTransaction(lender, htlc.address, 1500000)
 
     console.log(tx)
 }
@@ -184,10 +186,10 @@ function createScriptForLender(locktime, lsh, wsh, treasury, lender) {
             }
         })
         var data = {
-            htlcAddress: htlcAddress.address,
+            address: htlcAddress.address,
             lsh: lsh.toString('hex'),
             wsh: wsh.toString('hex'),
-            redeemScript: redeemScript.toString('hex'),
+            rs: redeemScript.toString('hex'),
             txId: ''
         }
         resolve(data)

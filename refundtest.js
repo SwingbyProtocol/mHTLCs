@@ -30,18 +30,24 @@ async function test() {
 
     const ls = new Buffer(process.env.LS, 'hex')
     const rs = new Buffer(process.env.RS, 'hex')
-    const tx = process.env.TX
-    const vout = process.env.VOUT
+    const txId = process.env.TX
+    const vout = Number(process.env.VOUT)
+    const lt = Number(process.env.LT)
 
     const txb = new bitcoin.TransactionBuilder(network)
 
-    console.log(ls, rs, tx, vout)
+    console.log(`ls = ${ls.toString('hex')} rs = ${rs.toString('hex')}`)
+    console.log(`txId = ${txId} vout = ${vout}`)
 
-    //txb.setLockTime(oldlocktme)
-    txb.addInput(tx, vout, 0xfffffffe)
+    txb.setLockTime(lt)
+    txb.addInput(txId, vout, 0xfffffffe)
     txb.addOutput(lender.address, 1500000 - fee)
 
+    const tx = txb.buildIncomplete()
+
     const sigHashType = bitcoin.Transaction.SIGHASH_ALL
+
+    const signatureHash = tx.hashForSignature(0, rs, sigHashType)
 
     const redeemScriptSig = bitcoin.payments.p2sh({
         redeem: {
@@ -55,7 +61,7 @@ async function test() {
         }
     }).input
     tx.setInputScript(0, redeemScriptSig)
-    console.log(`refund = ${tx.toHex()}`)
+    console.log(`refundTx = ${tx.toHex()}`)
 
 }
 

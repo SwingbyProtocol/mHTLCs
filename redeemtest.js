@@ -57,7 +57,7 @@ async function test() {
 
     const htlc = await createScriptForLender(lt, lsh, wsh, wallet1.publicKey, wallet2.publicKey)
 
-    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')}`, htlc)
+    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')} lt =${lt}`)
 
     const txId = await sendBTCTransaction(wallet1, htlc.htlcAddress, 1500000)
 }
