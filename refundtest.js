@@ -22,45 +22,41 @@ async function test() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    let lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
-    let treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
-
-    //const child = hdMaster.derivePath("m/44'/0'/0'/0/0")   //btc mainnet
-    //const child = hdMaster.derivePath("m/60'/0'/0'/0/0")   //ethereum main/test net
-
+    const lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
     lender.address = bitcoin.payments.p2pkh({
         pubkey: lender.publicKey,
         network: network
     }).address
-    // mgxAoHvFDBs4qAU2Migf7wcY1AcJpzRPHY (btc testnet)
-    // 12SDWEqGQARp43zQe9iHJ2QD9B1bwDPa77 (btc mainnet)
-    treasury.address = bitcoin.payments.p2pkh({
-        pubkey: treasury.publicKey,
-        network: network
-    }).address
 
-    console.log(lender.address, treasury.address)
+    const ls = new Buffer(process.env.LS, 'hex')
+    const rs = new Buffer(process.env.RS, 'hex')
+    const tx = process.env.TX
+    const vout = process.env.VOUT
 
-    //witness secret
-    const ws = crypto.randomBytes(32)
-    const wsh = bitcoin.crypto.sha256(ws)
+    const txb = new bitcoin.TransactionBuilder(network)
 
-    //lender secret
-    const ls = crypto.randomBytes(32)
-    const lsh = bitcoin.crypto.sha256(ls)
+    console.log(ls, rs, tx, vout)
 
-    //locktime 1400sec
-    const lt = bip65.encode({
-        utc: utcNow() + 1400
-    })
+    //txb.setLockTime(oldlocktme)
+    txb.addInput(tx, vout, 0xfffffffe)
+    txb.addOutput(lender.address, 1500000 - fee)
 
-    const htlc = await createScriptForLender(lt, lsh, wsh, treasury.publicKey, lender.publicKey)
+    const sigHashType = bitcoin.Transaction.SIGHASH_ALL
 
-    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')}`, htlc)
+    const redeemScriptSig = bitcoin.payments.p2sh({
+        redeem: {
+            input: bitcoin.script.compile([
+                bitcoin.script.signature.encode(lender.sign(signatureHash), sigHashType),
+                lender.publicKey,
+                ls,
+                bitcoin.opcodes.OP_FALSE
+            ]),
+            output: rs
+        }
+    }).input
+    tx.setInputScript(0, redeemScriptSig)
+    console.log(`refund = ${tx.toHex()}`)
 
-    const tx = await sendBTCTransaction(lender, htlc.htlcAddress, 1500000)
-
-    console.log(tx)
 }
 
 test()
@@ -105,7 +101,7 @@ function sendBTCTransaction(from, to, satoshis) {
         const data = {
             'tx': txb.build().toHex()
         }
-        resolve(data)
+        console.log(data)
     })
 }
 

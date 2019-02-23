@@ -22,24 +22,25 @@ async function test() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    let lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
-    let treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    let wallet1 = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
+    let wallet2 = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
 
     //const child = hdMaster.derivePath("m/44'/0'/0'/0/0")   //btc mainnet
     //const child = hdMaster.derivePath("m/60'/0'/0'/0/0")   //ethereum main/test net
 
-    lender.address = bitcoin.payments.p2pkh({
-        pubkey: lender.publicKey,
+    wallet1.address = bitcoin.payments.p2pkh({
+        pubkey: wallet1.publicKey,
         network: network
     }).address
     // mgxAoHvFDBs4qAU2Migf7wcY1AcJpzRPHY (btc testnet)
     // 12SDWEqGQARp43zQe9iHJ2QD9B1bwDPa77 (btc mainnet)
-    treasury.address = bitcoin.payments.p2pkh({
-        pubkey: treasury.publicKey,
+    wallet2.address = bitcoin.payments.p2pkh({
+        pubkey: wallet2.publicKey,
         network: network
     }).address
 
-    console.log(lender.address, treasury.address)
+    console.log(wallet1.address, wallet2.address)
+
 
     //witness secret
     const ws = crypto.randomBytes(32)
@@ -54,13 +55,11 @@ async function test() {
         utc: utcNow() + 1400
     })
 
-    const htlc = await createScriptForLender(lt, lsh, wsh, treasury.publicKey, lender.publicKey)
+    const htlc = await createScriptForLender(lt, lsh, wsh, wallet1.publicKey, wallet2.publicKey)
 
     console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')}`, htlc)
 
-    const tx = await sendBTCTransaction(lender, htlc.htlcAddress, 1500000)
-
-    console.log(tx)
+    const txId = await sendBTCTransaction(wallet1, htlc.htlcAddress, 1500000)
 }
 
 test()
@@ -105,7 +104,7 @@ function sendBTCTransaction(from, to, satoshis) {
         const data = {
             'tx': txb.build().toHex()
         }
-        resolve(data)
+        console.log(data)
     })
 }
 
