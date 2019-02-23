@@ -143,12 +143,12 @@ function createScriptForLender(locktime, lsh, wsh, treasury, lender) {
             // Stack: <treasury Sig> <pubkey> <witness secret> <lender secret>
             bitcoin.opcodes.OP_SHA256,
             // witness secret hash
-            wsh,
+            lsh,
             bitcoin.opcodes.OP_EQUALVERIFY,
             // Stack: <treasury Sig> <pubkey> <witness secret> 
             bitcoin.opcodes.OP_SHA256,
             // lender secret hash
-            lsh,
+            wsh,
             bitcoin.opcodes.OP_EQUALVERIFY,
             // Stack: <treasury Sig> <pubkey> 
             bitcoin.opcodes.OP_DUP,

@@ -22,44 +22,49 @@ async function test() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    let wallet1 = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
-    let wallet2 = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
-
-    //const child = hdMaster.derivePath("m/44'/0'/0'/0/0")   //btc mainnet
-    //const child = hdMaster.derivePath("m/60'/0'/0'/0/0")   //ethereum main/test net
-
-    wallet1.address = bitcoin.payments.p2pkh({
-        pubkey: wallet1.publicKey,
-        network: network
-    }).address
-    // mgxAoHvFDBs4qAU2Migf7wcY1AcJpzRPHY (btc testnet)
-    // 12SDWEqGQARp43zQe9iHJ2QD9B1bwDPa77 (btc mainnet)
-    wallet2.address = bitcoin.payments.p2pkh({
-        pubkey: wallet2.publicKey,
+    const treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    treasury.address = bitcoin.payments.p2pkh({
+        pubkey: treasury.publicKey,
         network: network
     }).address
 
-    console.log(wallet1.address, wallet2.address)
+    const ws = new Buffer(process.env.WS, 'hex')
+    const ls = new Buffer(process.env.LS, 'hex')
+    const rs = new Buffer(process.env.RS, 'hex')
+    const txId = process.env.TX
+    const vout = Number(process.env.VOUT)
+    const lt = Number(process.env.LT)
 
+    const txb = new bitcoin.TransactionBuilder(network)
 
-    //witness secret
-    const ws = crypto.randomBytes(32)
-    const wsh = bitcoin.crypto.sha256(ws)
+    console.log(`ws = ${ws.toString('hex')} rs = ${rs.toString('hex')}`)
+    console.log(`txId = ${txId} vout = ${vout}`)
 
-    //lender secret
-    const ls = crypto.randomBytes(32)
-    const lsh = bitcoin.crypto.sha256(ls)
+    //txb.setLockTime(lt)
+    txb.addInput(txId, vout, 0xfffffffe)
+    txb.addOutput(treasury.address, 1500000 - fee)
 
-    //locktime 1400sec
-    const lt = bip65.encode({
-        utc: utcNow() + 1400
-    })
+    const tx = txb.buildIncomplete()
 
-    const htlc = await createScriptForLender(lt, lsh, wsh, wallet1.publicKey, wallet2.publicKey)
+    const sigHashType = bitcoin.Transaction.SIGHASH_ALL
 
-    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')} lt =${lt}`)
+    const signatureHash = tx.hashForSignature(0, rs, sigHashType)
 
-    const txId = await sendBTCTransaction(wallet1, htlc.htlcAddress, 1500000)
+    const redeemScriptSig = bitcoin.payments.p2sh({
+        redeem: {
+            input: bitcoin.script.compile([
+                bitcoin.script.signature.encode(treasury.sign(signatureHash), sigHashType),
+                treasury.publicKey,
+                ws, // witness
+                ls, // lender
+                bitcoin.opcodes.OP_TRUE
+            ]),
+            output: rs
+        }
+    }).input
+    tx.setInputScript(0, redeemScriptSig)
+    console.log(`redeemTx = ${tx.toHex()}`)
+
 }
 
 test()
