@@ -6,8 +6,6 @@ const got = require('got');
 
 const seedPhrase = process.env.SEED ? process.env.SEED : "door sad lonely priority omit burst virtual action cable humor verb orbit"
 
-const fee = 30000
-
 const network = bitcoin.networks.testnet
 
 let test3 = (network == bitcoin.networks.testnet) ? 'test-' : ''
