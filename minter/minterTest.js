@@ -16,7 +16,7 @@ const client = got.extend({
     }
 });
 
-async function test() {
+async function minterTest() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
@@ -63,7 +63,7 @@ async function test() {
     console.log(tx)
 }
 
-test()
+minterTest()
 
 function utcNow() {
     return Math.floor(Date.now() / 1000)

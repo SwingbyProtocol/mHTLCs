@@ -6,6 +6,8 @@ const got = require('got');
 
 const seedPhrase = process.env.SEED ? process.env.SEED : "door sad lonely priority omit burst virtual action cable humor verb orbit"
 
+const fee = 30000
+
 const network = bitcoin.networks.testnet
 
 let test3 = (network == bitcoin.networks.testnet) ? 'test-' : ''
@@ -20,29 +22,29 @@ async function test() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    const treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
-    treasury.address = bitcoin.payments.p2pkh({
-        pubkey: treasury.publicKey,
+    const lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
+    lender.address = bitcoin.payments.p2pkh({
+        pubkey: lender.publicKey,
         network: network
     }).address
 
-    const ws = new Buffer(process.env.WS, 'hex')
     const ls = new Buffer(process.env.LS, 'hex')
     const rs = new Buffer(process.env.RS, 'hex')
-    const lt = Number(process.env.LT)
-    const txId = process.env.TX
+    const txId = String(process.env.TX)
     const vout = Number(process.env.VOUT)
+    const lt = Number(process.env.LT)
 
     const txb = new bitcoin.TransactionBuilder(network)
 
-    console.log(`ws = ${ws.toString('hex')} rs = ${rs.toString('hex')}`)
-    console.log(`txId = ${txId} vout = ${vout}`)
-    
+    console.log(`ls = ${ls.toString('hex')} rs = ${rs.toString('hex')}`)
+    console.log(`txId = ${txId} vout = ${vout} lt = ${lt}`)
+
     let fee = 10300
 
-    //txb.setLockTime(lt)
+    txb.setLockTime(lt)
+    // Note: nSequence MUST be <= 0xfffffffe otherwise LockTime is ignored, and is immediately spendable.
     txb.addInput(txId, vout, 0xfffffffe)
-    txb.addOutput(treasury.address, 1500000 - fee)
+    txb.addOutput(lender.address, 1500000 - fee)
 
     const tx = txb.buildIncomplete()
 
@@ -53,17 +55,16 @@ async function test() {
     const redeemScriptSig = bitcoin.payments.p2sh({
         redeem: {
             input: bitcoin.script.compile([
-                bitcoin.script.signature.encode(treasury.sign(signatureHash), sigHashType),
-                treasury.publicKey,
-                ws, // witness
-                ls, // lender
-                bitcoin.opcodes.OP_TRUE
+                bitcoin.script.signature.encode(lender.sign(signatureHash), sigHashType),
+                lender.publicKey,
+                ls,
+                bitcoin.opcodes.OP_FALSE
             ]),
             output: rs
         }
     }).input
     tx.setInputScript(0, redeemScriptSig)
-    console.log(`redeemTx = ${tx.toHex()}`)
+    console.log(`refundTx = ${tx.toHex()}`)
 
 }
 
