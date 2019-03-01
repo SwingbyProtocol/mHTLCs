@@ -23,7 +23,7 @@ async function dropTest() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    const treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    const treasury = hdMaster.derivePath("m/44'/1'/0'/0/2") //btc testnet
     
     treasury.address = bitcoin.payments.p2pkh({
         pubkey: treasury.publicKey,
