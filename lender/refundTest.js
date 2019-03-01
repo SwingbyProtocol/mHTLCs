@@ -18,7 +18,7 @@ const client = got.extend({
     }
 });
 
-async function test() {
+async function refundTest() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
@@ -28,8 +28,8 @@ async function test() {
         network: network
     }).address
 
-    const ls = new Buffer(process.env.LS, 'hex')
-    const rs = new Buffer(process.env.RS, 'hex')
+    const ls = Buffer.from(process.env.LS, 'hex')
+    const rs = Buffer.from(process.env.RS, 'hex')
     const txId = String(process.env.TX)
     const vout = Number(process.env.VOUT)
     const lt = Number(process.env.LT)
@@ -68,4 +68,4 @@ async function test() {
 
 }
 
-test()
+refundTest()

@@ -16,19 +16,21 @@ const client = got.extend({
     }
 });
 
-async function LenderHTLC() {
+
+
+async function dropTest() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    const treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    const treasury = hdMaster.derivePath("m/44'/1'/0'/0/2") //btc testnet
     treasury.address = bitcoin.payments.p2pkh({
         pubkey: treasury.publicKey,
         network: network
     }).address
 
-    const ws = new Buffer(process.env.WS, 'hex')
-    const ls = new Buffer(process.env.LS, 'hex')
-    const rs = new Buffer(process.env.RS, 'hex')
+    const ws = Buffer.from(process.env.WS, 'hex')
+    const ls = Buffer.from(process.env.LS, 'hex')
+    const rs = Buffer.from(process.env.RS, 'hex')
     const lt = Number(process.env.LT)
     const txId = process.env.TX
     const vout = Number(process.env.VOUT)
@@ -37,11 +39,12 @@ async function LenderHTLC() {
 
     console.log(`ws = ${ws.toString('hex')} rs = ${rs.toString('hex')}`)
     console.log(`txId = ${txId} vout = ${vout}`)
-    
+
     let fee = 10300
 
     //txb.setLockTime(lt)
     txb.addInput(txId, vout, 0xfffffffe)
+    // satoshis send to treasury
     txb.addOutput(treasury.address, 1500000 - fee)
 
     const tx = txb.buildIncomplete()
@@ -67,4 +70,4 @@ async function LenderHTLC() {
 
 }
 
-LenderHTLC()
+dropTest()

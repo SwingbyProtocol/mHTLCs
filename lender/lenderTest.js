@@ -4,6 +4,7 @@ const bip65 = require('bip65')
 const crypto = require('crypto')
 const got = require('got');
 
+// test phrase
 const seedPhrase = process.env.SEED ? process.env.SEED : "door sad lonely priority omit burst virtual action cable humor verb orbit"
 
 const network = bitcoin.networks.testnet
@@ -21,7 +22,7 @@ async function lenderTest() {
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
     let lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
-    let minter = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    //let minter = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet 
     let treasury = hdMaster.derivePath("m/44'/1'/0'/0/2") //btc testnet
 
     //const child = hdMaster.derivePath("m/44'/0'/0'/0/0")   //btc mainnet
@@ -89,22 +90,23 @@ function sendBTCTransaction(from, to, satoshis) {
             }
         })
 
+        if (total < satoshis) {
+            return reject('Error: balance insufficient')
+        }
+
         txb.addOutput(to, satoshis) // the actual "spend"
         txb.addOutput(from.address, total - satoshis - fee)
 
-
-        if (total < satoshis) {
-            reject('balance insufficient')
-        }
         for (var i = 0; i < count; i++) {
             txb.sign(i, from)
 
         }
         // (in)15000 - (out)12000 = (fee)3000, this is the miner fee
         // txb.sign(1, key)
-
         const data = {
-            'tx': txb.build().toHex()
+            'tx': txb.build().toHex(),
+            'id': txb.build().getId()
+
         }
         resolve(data)
     })

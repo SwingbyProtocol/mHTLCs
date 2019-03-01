@@ -20,14 +20,15 @@ async function minterTest() {
     const seed = bip39.mnemonicToSeed(seedPhrase)
 
     const hdMaster = bitcoin.bip32.fromSeed(seed, network) // seed from above
-    let lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
-    let treasury = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    //let lender = hdMaster.derivePath("m/44'/1'/0'/0/0") //btc testnet
+    let minter = hdMaster.derivePath("m/44'/1'/0'/0/1") //btc testnet
+    let treasury = hdMaster.derivePath("m/44'/1'/0'/0/2") //btc testnet
 
     //const child = hdMaster.derivePath("m/44'/0'/0'/0/0")   //btc mainnet
     //const child = hdMaster.derivePath("m/60'/0'/0'/0/0")   //ethereum main/test net
 
-    lender.address = bitcoin.payments.p2pkh({
-        pubkey: lender.publicKey,
+    minter.address = bitcoin.payments.p2pkh({
+        pubkey: minter.publicKey,
         network: network
     }).address
     // mgxAoHvFDBs4qAU2Migf7wcY1AcJpzRPHY (btc testnet)
@@ -37,14 +38,14 @@ async function minterTest() {
         network: network
     }).address
 
-    console.log(lender.address, treasury.address)
+    console.log(minter.address, treasury.address)
 
-    //witness secret
-    const ws = crypto.randomBytes(32)
-    const wsh = bitcoin.crypto.sha256(ws)
+    //minter secret
+    const ms = crypto.randomBytes(32)
+    const msh = bitcoin.crypto.sha256(ms)
 
-    //lender secret
-    const ls = crypto.randomBytes(32)
+    //lender secret 
+    const ls = Buffer.from(process.env.LS, 'hex')
     const lsh = bitcoin.crypto.sha256(ls)
 
     //locktime 1400sec
@@ -52,13 +53,13 @@ async function minterTest() {
         utc: utcNow() + 1400
     })
 
-    const htlc = await createScriptForLender(lt, lsh, wsh, treasury.publicKey, lender.publicKey)
+    const htlc = await createScriptForMinter(lt, lsh, msh, treasury.publicKey, minter.publicKey)
 
-    console.log(`ws = ${ws.toString('hex')} ls = ${ls.toString('hex')} lt = ${lt}`)
+    console.log(`ms = ${ms.toString('hex')} ls = ${ls.toString('hex')} lt = ${lt}`)
     console.log(`htlc = ${htlc.address}`)
     console.log(`rs = ${htlc.rs}`)
 
-    const tx = await sendBTCTransaction(lender, htlc.address, 1500000)
+    const tx = await sendBTCTransaction(minter, htlc.address, 1500000)
 
     console.log(tx)
 }
@@ -88,22 +89,23 @@ function sendBTCTransaction(from, to, satoshis) {
             }
         })
 
+        if (total < satoshis) {
+            return reject('Error: balance insufficient')
+        }
         txb.addOutput(to, satoshis) // the actual "spend"
         txb.addOutput(from.address, total - satoshis - fee)
 
 
-        if (total < satoshis) {
-            reject('balance insufficient')
-        }
         for (var i = 0; i < count; i++) {
             txb.sign(i, from)
 
         }
         // (in)15000 - (out)12000 = (fee)3000, this is the miner fee
         // txb.sign(1, key)
-
         const data = {
-            'tx': txb.build().toHex()
+            'tx': txb.build().toHex(),
+            'id': txb.build().getId()
+
         }
         resolve(data)
     })
@@ -125,7 +127,7 @@ async function getUTXO(addr) {
 
 
 
-function createScriptForLender(locktime, lsh, wsh, treasury, lender) {
+function createScriptForMinter(locktime, lsh, msh, treasury, minter) {
     return new Promise((resolve, reject) => {
         if (locktime <= utcNow()) {
             reject('error')
@@ -133,44 +135,38 @@ function createScriptForLender(locktime, lsh, wsh, treasury, lender) {
 
         const treasuryHash = bitcoin.crypto.hash160(treasury)
 
-        const lenderHash = bitcoin.crypto.hash160(lender)
+        const minterHash = bitcoin.crypto.hash160(minter)
         // var now = Math.floor(Date.now() / 1000) 
 
         var redeemScript = bitcoin.script.compile([
             bitcoin.opcodes.OP_IF,
-            // Stack: <treasury Sig> <pubkey> <witness secret> <lender secret>
+            // Stack: <minter Sig> <pubkey> <minter secret> <lender secret>
             bitcoin.opcodes.OP_SHA256,
             // witness secret hash
             lsh,
             bitcoin.opcodes.OP_EQUALVERIFY,
-            // Stack: <treasury Sig> <pubkey> <witness secret> 
+            // Stack: <minter Sig> <pubkey> <minter secret> 
             bitcoin.opcodes.OP_SHA256,
             // lender secret hash
-            wsh,
+            msh,
             bitcoin.opcodes.OP_EQUALVERIFY,
-            // Stack: <treasury Sig> <pubkey> 
+            // Stack: <minter Sig> <pubkey> 
+            bitcoin.opcodes.OP_DUP,
+            // Stack: <minter Sig> <pubkey> <pubkey>
+            bitcoin.opcodes.OP_HASH160,
+            // Stack: <minter Sig> <pubkey> <minterHash>
+            minterHash,
+
+            bitcoin.opcodes.OP_ELSE,
+            bitcoin.script.number.encode(locktime),
+            // Stack: <treasury Sig> <pubkey> <locktime>
+            bitcoin.opcodes.OP_CHECKLOCKTIMEVERIFY,
+            bitcoin.opcodes.OP_DROP,
             bitcoin.opcodes.OP_DUP,
             // Stack: <treasury Sig> <pubkey> <pubkey>
             bitcoin.opcodes.OP_HASH160,
             // Stack: <treasury Sig> <pubkey> <treasuryHash>
             treasuryHash,
-
-            bitcoin.opcodes.OP_ELSE,
-            bitcoin.script.number.encode(locktime),
-            // Stack: <lender Sig> <pubkey> <lender secret> <locktime>
-            bitcoin.opcodes.OP_CHECKLOCKTIMEVERIFY,
-            bitcoin.opcodes.OP_DROP,
-            // Stack: <lender Sig> <pubkey> <lender secret>
-            bitcoin.opcodes.OP_SHA256,
-            // lender seccret hash
-            lsh,
-            bitcoin.opcodes.OP_EQUALVERIFY,
-            // Stack: <lender Sig> <pubkey>
-            bitcoin.opcodes.OP_DUP,
-            // Stack: <lender Sig> <pubkey> <pubkey>
-            bitcoin.opcodes.OP_HASH160,
-            // Stack: <lender Sig> <pubkey> <lenderhash>
-            lenderHash,
             bitcoin.opcodes.OP_ENDIF,
 
             bitcoin.opcodes.OP_EQUALVERIFY,
@@ -186,7 +182,7 @@ function createScriptForLender(locktime, lsh, wsh, treasury, lender) {
         var data = {
             address: htlcAddress.address,
             lsh: lsh.toString('hex'),
-            wsh: wsh.toString('hex'),
+            msh: msh.toString('hex'),
             rs: redeemScript.toString('hex'),
             txId: ''
         }
