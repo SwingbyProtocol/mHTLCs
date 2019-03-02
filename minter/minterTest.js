@@ -48,6 +48,8 @@ async function minterTest() {
     const ls = Buffer.from(process.env.LS, 'hex')
     const lsh = bitcoin.crypto.sha256(ls)
 
+    //beneficiary
+    const beneficiary = process.env.LENDER_HTLC
     //locktime 1400sec
     const lt = bip65.encode({
         utc: utcNow() + 1400
@@ -59,7 +61,7 @@ async function minterTest() {
     console.log(`htlc = ${htlc.address}`)
     console.log(`rs = ${htlc.rs}`)
 
-    const tx = await sendBTCTransaction(minter, htlc.address, 1500000)
+    const tx = await sendBTCTransaction(minter, htlc.address, beneficiary, 1500000)
 
     console.log(tx)
 }
@@ -70,7 +72,7 @@ function utcNow() {
     return Math.floor(Date.now() / 1000)
 }
 
-function sendBTCTransaction(from, to, satoshis) {
+function sendBTCTransaction(from, to, beneficiary, satoshis) {
     return new Promise(async (resolve, reject) => {
 
         const utxoGroup = await getUTXO(from.address)
@@ -78,6 +80,7 @@ function sendBTCTransaction(from, to, satoshis) {
         const txb = new bitcoin.TransactionBuilder(network)
         // txb.setVersion(1)
         let fee = 10300
+        let interest = 50000
         let total = 0
         let count = 0
 
@@ -93,7 +96,8 @@ function sendBTCTransaction(from, to, satoshis) {
             return reject('Error: balance insufficient')
         }
         txb.addOutput(to, satoshis) // the actual "spend"
-        txb.addOutput(from.address, total - satoshis - fee)
+        txb.addOutput(beneficiary, interest)
+        txb.addOutput(from.address, total - satoshis - interest - fee)
 
 
         for (var i = 0; i < count; i++) {
