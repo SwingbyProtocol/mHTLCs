@@ -26,7 +26,7 @@ async function lenderTest() {
     let treasury = hdMaster.derivePath("m/44'/1'/0'/0/2") //btc testnet
 
     //const child = hdMaster.derivePath("m/44'/0'/0'/0/0")   //btc mainnet
-    //const child = hdMaster.derivePath("m/60'/0'/0'/0/0")   //ethereum main/test net
+    //const child = hdMaster.derivePath("m/44'/60'/0'/0/0")   //ethereum main/test net
 
     lender.address = bitcoin.payments.p2pkh({
         pubkey: lender.publicKey,
